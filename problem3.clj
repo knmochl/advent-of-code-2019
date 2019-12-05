@@ -29,7 +29,18 @@
   [wire-list]
   (apply clojure.set/intersection (map #(set (drop 1 (run-wires %))) wire-list)))
 
+(defn wire-delay
+  [wires intersection]
+  (apply + (map #(.indexOf % intersection) wires)))
+
 (defn problem3
   []
   (first (sort (map #(+ (Math/abs (first %)) (Math/abs (second %))) (find-intersections (load-wires "input3.txt"))))))
+
+(defn problem3-2
+  []
+  (let [wires (load-wires "input3.txt")
+        wire-positions (map run-wires wires)
+        intersections (find-intersections wires)]
+    (first (sort (map #(wire-delay wire-positions %) intersections)))))
 
