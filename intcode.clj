@@ -56,6 +56,34 @@
       (let [value1 (get-value memory (+ instruction-pointer 1) (get-mode modes 1))
             new-output (conj output value1)]
         [memory (+ instruction-pointer 2) input new-output])
+      (= opcode 5)
+      (let [value1 (get-value memory (+ instruction-pointer 1) (get-mode modes 1))
+            new-ip (get-value memory (+ instruction-pointer 2) (get-mode modes 2))]
+        (if (= value1 0)
+          [memory (+ instruction-pointer 3) input output]
+          [memory new-ip input output]))
+      (= opcode 6)
+      (let [value1 (get-value memory (+ instruction-pointer 1) (get-mode modes 1))
+            new-ip (get-value memory (+ instruction-pointer 2) (get-mode modes 2))]
+        (if (= value1 0)
+          [memory new-ip input output]
+          [memory (+ instruction-pointer 3) input output]))
+      (= opcode 7)
+      (let [value1 (get-value memory (+ instruction-pointer 1) (get-mode modes 1))
+            value2 (get-value memory (+ instruction-pointer 2) (get-mode modes 2))
+            target (get-value memory (+ instruction-pointer 3) 1)
+            new-memory (if (< value1 value2)
+                         (set-value memory target 1)
+                         (set-value memory target 0))]
+        [new-memory (+ instruction-pointer 4) input output])
+      (= opcode 8)
+      (let [value1 (get-value memory (+ instruction-pointer 1) (get-mode modes 1))
+            value2 (get-value memory (+ instruction-pointer 2) (get-mode modes 2))
+            target (get-value memory (+ instruction-pointer 3) 1)
+            new-memory (if (= value1 value2)
+                         (set-value memory target 1)
+                         (set-value memory target 0))]
+        [new-memory (+ instruction-pointer 4) input output])
       :else "error")))
 
 (defn run-opcode
