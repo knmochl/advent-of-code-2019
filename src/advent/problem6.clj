@@ -1,4 +1,6 @@
-(ns advent.problem6)
+(ns advent.problem6
+  [:require
+   [clojure.java.io :as jio]])
 
 (defn add-orbit
   [orbits new-orbit]
@@ -9,7 +11,7 @@
   [filename]
   (reduce add-orbit {} 
           (map #(clojure.string/split % #"\)")
-               (clojure.string/split-lines (slurp filename)))))
+               (clojure.string/split-lines (slurp (jio/resource filename))))))
 
 (defn count-orbits
   [orbit-map orbits n accum]

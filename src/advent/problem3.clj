@@ -1,4 +1,6 @@
-(ns advent.problem3)
+(ns advent.problem3
+  [:require
+   [clojure.java.io :as jio]])
 
 (defn wire-positions
   [[start-x start-y] wire]
@@ -23,7 +25,7 @@
 
 (defn load-wires
   [filename]
-  (map #(clojure.string/split % #",") (-> filename slurp clojure.string/split-lines)))
+  (map #(clojure.string/split % #",") (-> filename jio/resource slurp clojure.string/split-lines)))
 
 (defn find-intersections
   [wire-list]

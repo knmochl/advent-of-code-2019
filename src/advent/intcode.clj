@@ -1,5 +1,6 @@
 (ns advent.intcode
   [:require
+   [clojure.java.io :as jio]
    [clojure.string :as str]])
 
 (defn get-value
@@ -99,4 +100,4 @@
 
 (defn load-program
   [filename]
-  (vec (map #(Integer. %) (str/split (str/trim-newline (slurp filename)) #","))))
+  (vec (map #(Integer. %) (str/split (str/trim-newline (slurp (jio/resource filename))) #","))))

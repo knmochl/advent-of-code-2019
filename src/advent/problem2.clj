@@ -1,11 +1,12 @@
 (ns advent.problem2
   [:require
+   [clojure.java.io :as jio]
    [clojure.string :as str]
    [clojure.edn :as edn]])
 
 (defn load-program
   [filename]
-  (vec (map edn/read-string (str/split (str/trim-newline (slurp filename)) #","))))
+  (vec (map edn/read-string (str/split (str/trim-newline (slurp (jio/resource filename))) #","))))
 
 (defn get-value
   [coll pos]

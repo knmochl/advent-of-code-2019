@@ -1,7 +1,8 @@
 (ns advent.problem1
   (:require
-   [clojure.string]
-   [clojure.edn]))
+   [[clojure.string]
+    [clojure.edn]
+    [clojure.java.io :as jio]]))
 
 (defn fuel-required
   [mass]
@@ -21,5 +22,5 @@
 
 (defn problem1
   []
-  (count-fuel (parse-input "prob1-1.input.txt")))
+  (count-fuel (parse-input (jio/resource "input1.txt"))))
 
