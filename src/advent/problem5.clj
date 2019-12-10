@@ -4,9 +4,9 @@
 
 (defn problem5-1
   []
-  (nth (advent.intcode/run-opcode (advent.intcode/load-program "input5.txt") 0 [1] []) 3))
+  (:output (advent.intcode/run-opcode (advent.intcode (advent.intcode/load-program "input5.txt") [1]))))
 
 (defn problem5-2
   []
-  (nth (advent.intcode/run-opcode (advent.intcode/load-program "input5.txt") 0 [5] []) 3))
+  (:output (advent.intcode/run-opcode (advent.intcode (advent.intcode/load-program "input5.txt") [5]))))
 

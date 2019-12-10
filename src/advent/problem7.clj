@@ -4,7 +4,7 @@
 
 (defn run-amplifier
   [program-code phase input]
-  (first (last (intcode/run-opcode program-code 0 [phase input] []))))
+  (first (:output (intcode/run-opcode (intcode/make-machine program-code [phase input])))))
 
 (defn run-amps
   [program-code phase-list]
@@ -40,24 +40,17 @@
 
 (defn run-amps-feedback
   [phase-list]
-  (loop [memories (vec (repeat 5 (intcode/load-program "input7.txt")))
-         ips [0 0 0 0 0]
-         inputs (assoc-in (vec (map vector phase-list)) [0 1] 0)
-         outputs [[] [] [] [] []]
+  (loop [machines (assoc-in (vec (map #(intcode/make-machine (intcode/load-program "input7.txt") [%]) phase-list)) [0 :input 1] 0)
          current-amp 0
          current-output 0]
-    (let [result (run-feedback-amp (nth memories current-amp)
-                                   (nth ips current-amp)
-                                   (nth inputs current-amp)
-                                   (nth outputs current-amp))]
-      (if (vector? result)
+    (let [new-machine (intcode/run-to-output (nth machines current-amp))]
+      (if (nil? (:ip new-machine))
+        current-output
         (let [next-amp (if (= current-amp 4) 0 (inc current-amp))
-              next-output (first (get result 3))
-              new-memories (assoc memories current-amp (nth result 0))
-              new-ips (assoc ips current-amp (nth result 1))
-              new-inputs (assoc (assoc inputs current-amp (nth result 2)) next-amp (conj (get inputs next-amp) next-output))]
-          (recur new-memories new-ips new-inputs outputs next-amp next-output))
-        current-output))))
+              next-output (first (:output new-machine))
+              cleared-output (assoc-in machines [current-amp :output] [])
+              added-input (assoc-in cleared-output [next-amp :input] [next-output])]
+          (recur added-input next-amp next-output))))))
 
 (defn problem7-2
   []
