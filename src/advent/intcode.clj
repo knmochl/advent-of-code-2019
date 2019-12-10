@@ -110,6 +110,15 @@
         (assoc machine :ip (+ instruction-pointer 2) :relative value1))
       :else "error")))
 
+(defn run-to-output
+  [machine]
+  (let [new-machine (execute-opcode machine)]
+    (cond
+      (= (:ip new-machine) nil) new-machine
+      (= new-machine "error") "error"
+      (not (empty? (:output new-machine))) new-machine
+      :else (recur new-machine))))
+
 (defn run-opcode
   [machine]
    (let [new-machine (execute-opcode machine)]
