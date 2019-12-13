@@ -137,6 +137,10 @@
        (= new-machine "error") "error"
        :else (recur new-machine))))
 
+(defn get-output
+  [machine]
+  (first (:output machine)))
+
 (defn load-program
   [filename]
   (vec (map edn/read-string (str/split (str/trim-newline (slurp (jio/resource filename))) #","))))
