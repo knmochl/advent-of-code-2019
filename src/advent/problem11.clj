@@ -2,8 +2,8 @@
   (:require [advent.intcode :as intcode]))
 
 (defn initialize-robot
-  [filename]
-  {:computer (intcode/make-machine (intcode/load-program filename) [0])
+  [filename start-color]
+  {:computer (intcode/make-machine (intcode/load-program filename) [start-color])
    :direction [0 1]
    :location [0 0]
    :tiles #{}
@@ -56,5 +56,21 @@
 
 (defn problem11-1
   []
-  (let [robot (run-robot (initialize-robot "input11.txt"))]
+  (let [robot (run-robot (initialize-robot "input11.txt" 0))]
     (count (:all-tiles robot))))
+
+(defn make-output-line
+  [tiles min-x max-x]
+  (let [positions (set (map first tiles))]
+    (clojure.string/join (map #(if (contains? positions %) "X" " ") (range min-x (inc max-x))))))
+
+(defn problem11-2
+  []
+  (let [robot (run-robot (initialize-robot "input11.txt" 1))
+        tiles (:tiles robot)
+        min-x (apply min (map first tiles))
+        max-x (apply max (map first tiles))
+        min-y (apply min (map second tiles))
+        max-y (apply max (map second tiles))
+        grouped-tiles (group-by second tiles)]
+    (map #(make-output-line (grouped-tiles %) min-x max-x) (reverse (sort (keys grouped-tiles))))))
