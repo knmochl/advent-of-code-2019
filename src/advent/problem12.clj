@@ -57,3 +57,40 @@
               (nth (iterate update-moons
                             (load-scan "input12.txt")) 1000))))
 
+(defn find-duplicate
+  [moons previous-states counter]
+  (do (when (= 0 (rem counter 100000)) (println counter))
+    (if (contains? previous-states [(hash moons) (.hashCode moons)])
+     [counter moons]
+     (recur (update-moons moons) (conj previous-states [(hash moons ) (.hashCode moons)]) (inc counter)))))
+
+(defn moons-by-axis
+  [moons n]
+  (mapcat #(vector (nth (:pos (second %)) n) (nth (:vel (second %)) n)) moons))
+
+(defn find-periods
+  [moons initial-state period-list counter]
+  (if (every? (complement nil?) period-list)
+    period-list
+    (let [new-moons (update-moons moons)
+          new-axis (map (partial moons-by-axis new-moons) (range 0 3))
+          new-counter (inc counter)
+          new-periods (mapv #(if (= %1 %2) (or %3 new-counter) %3) initial-state new-axis period-list)]
+      (do (when (= 0 (rem counter 100000)) (println (str counter " " new-periods))) new-moons (recur new-moons initial-state new-periods (inc counter))))))
+
+(defn gcd
+  [a b]
+  (if (zero? b)
+    a
+    (recur b, (mod a b))))
+
+(defn lcm
+  [a b]
+  (/ (* a b) (gcd a b)))
+
+(defn problem12-2
+  []
+  (let [moons (load-scan "input12.txt")
+        initial-state (map (partial moons-by-axis moons) (range 0 3))
+        periods (find-periods moons initial-state [nil nil nil] 0)]
+    (reduce lcm periods)))
