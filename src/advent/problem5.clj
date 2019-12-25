@@ -1,12 +1,18 @@
 (ns advent.problem5
   [:require
-   [advent.intcode :as intcode]])
+   [advent.intcode :as intcode]
+   [clojure.core.async :as async :refer [>!! <!!]]])
 
 (defn problem5-1
   []
-  (:output (advent.intcode/run-opcode (advent.intcode (advent.intcode/load-program "input5.txt") [1]))))
+  (let [machine (intcode/make-machine (intcode/load-program "input5.txt"))]
+    (do (intcode/execute-machine machine)
+        (>!! (:input machine) 1)
+        (<!! (async/into [] (:output machine))))))
 
 (defn problem5-2
   []
-  (:output (advent.intcode/run-opcode (advent.intcode (advent.intcode/load-program "input5.txt") [5]))))
-
+  (let [machine (intcode/make-machine (intcode/load-program "input5.txt"))]
+    (do (intcode/execute-machine machine)
+        (>!! (:input machine) 5)
+        (<!! (async/into [] (:output machine))))))

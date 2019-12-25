@@ -1,10 +1,16 @@
 (ns advent.problem7
   [:require
-   [advent.intcode :as intcode]])
+   [advent.intcode :as intcode]
+   [clojure.core.async :as async :refer [>!! <!! chan]]])
 
 (defn run-amplifier
   [program-code phase input]
-  (first (:output (intcode/run-opcode (intcode/make-machine program-code [phase input])))))
+  (let [machine (intcode/make-machine program-code)]
+    (do
+      (intcode/execute-machine machine)
+      (>!! (:input machine) phase)
+      (>!! (:input machine) input)
+      (<!! (:output machine)))))
 
 (defn run-amps
   [program-code phase-list]
@@ -28,30 +34,27 @@
   (let [program-code (intcode/load-program "input7.txt")]
     (apply max (map (partial run-amps program-code) (permutations [0 1 2 3 4])))))
 
-(defn run-feedback-amp
-  [memory instruction-pointer input output]
-  (let [result (intcode/execute-opcode memory instruction-pointer input output)]
-    (cond
-      (= result nil) nil
-      (= result "error") "error"
-      (not (empty? (nth result 3))) result
-      :else (let [[new-mem new-ip new-input new-output] result]
-              (recur new-mem new-ip new-input new-output)))))
-
-(defn run-amps-feedback
+(defn run-amps-with-feedback
   [phase-list]
-  (loop [machines (assoc-in (vec (map #(intcode/make-machine (intcode/load-program "input7.txt") [%]) phase-list)) [0 :input 1] 0)
-         current-amp 0
-         current-output 0]
-    (let [new-machine (intcode/run-to-output (nth machines current-amp))]
-      (if (nil? (:ip new-machine))
-        current-output
-        (let [next-amp (if (= current-amp 4) 0 (inc current-amp))
-              next-output (first (:output new-machine))
-              cleared-output (assoc-in machines [current-amp :output] [])
-              added-input (assoc-in cleared-output [next-amp :input] [next-output])]
-          (recur added-input next-amp next-output))))))
+  (let [program-code (intcode/load-program "input7.txt")
+        machines (vec (repeatedly 5 (partial intcode/make-machine program-code)))
+        final-output (async/mult (:output (nth machines 4)))
+        feedback-chan (chan)
+        output-chan (chan)]
+    (do
+      (doall (map #(async/pipe (:output (nth machines %)) (:input (nth machines (inc %)))) (range 0 4)))
+      (async/tap final-output feedback-chan)
+      (async/tap final-output output-chan)
+      (async/pipe feedback-chan (:input (nth machines 0)))
+      (doall (map intcode/execute-machine machines))
+      (doall (map #(>!! (:input %2) %1) phase-list machines))
+      (>!! (:input (nth machines 0)) 0)
+    (loop [final-value (<!! output-chan)]
+      (let [output (<!! output-chan)]
+        (if (nil? output)
+          final-value
+          (recur output)))))))
 
 (defn problem7-2
   []
-  (apply max (map run-amps-feedback (permutations [5 6 7 8 9]))))
+  (apply max (map run-amps-with-feedback (permutations [5 6 7 8 9]))))
