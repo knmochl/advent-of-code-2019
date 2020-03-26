@@ -77,6 +77,7 @@
            (recur (assoc machine :memory new-memory :ip new-ip)))
          (= opcode 3)
          (let [target (get-target machine (+ instruction-pointer 1) (get-mode modes 1))
+               control (>! (:control machine) :input-needed)
                input (<! (:input machine))
                new-memory (set-value memory target input)
                new-ip (+ instruction-pointer 2)]
@@ -129,6 +130,6 @@
 
 (defn make-machine
   ([memory]
-   {:memory memory :ip 0 :input (chan) :output (chan) :relative 0})
+   {:memory memory :ip 0 :input (chan) :output (chan) :control (chan) :relative 0})
   ([memory input output]
    {:memory memory :ip 0 :input input :output output :relative 0}))
