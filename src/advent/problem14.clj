@@ -40,10 +40,11 @@
   (let [stockpile (first (ingredients ingredient))
         requested (second (ingredients ingredient))
         recipe-amount (recipe-product-amount recipes ingredient)
-        added-ingredients (ingredient-list recipes ingredient)]
+        recipes-needed (int (Math/ceil (/ (- requested stockpile) recipe-amount)))
+        added-ingredients (mapv #(update % 0 * recipes-needed) (ingredient-list recipes ingredient))]
     (if (>= stockpile requested)
       ingredients
-      (update-in (reduce (partial add-ingredient-to-list recipes) ingredients added-ingredients) [ingredient 0] + recipe-amount))))
+      (update-in (reduce (partial add-ingredient-to-list recipes) ingredients added-ingredients) [ingredient 0] + (* recipes-needed recipe-amount)))))
 
 (defn update-ingredients
   [recipes ingredients]
@@ -60,3 +61,16 @@
   (let [recipes (load-recipes "input14.txt")
         request {"FUEL" [0 1]}]
     (second ((update-ingredients recipes request) "ORE"))))
+
+(defn problem14-2
+  []
+  (let [recipes (load-recipes "input14.txt")]
+    (loop [request (update-ingredients recipes {"FUEL" [0 1000]})
+           increment 1000]
+      (let [new-request (update-in request ["FUEL" 1] + increment)
+            new-ingredients (update-ingredients recipes new-request)]
+        (if (> (second (new-ingredients "ORE")) 1000000000000)
+          (if (= increment 1)
+            (first (request "FUEL"))
+            (recur request (/ increment 10)))
+          (recur new-ingredients increment))))))
