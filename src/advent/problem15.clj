@@ -48,3 +48,26 @@
   (let [machine (intcode/make-machine (intcode/load-program "input15.txt"))
         run (intcode/execute-machine machine)]
     (find-generator machine 1 [0 0] {[0 0] 0})))
+
+(defn map-area
+  [machine facing location distances]
+  (let [[new-facing new-location done?] (find-move machine facing location)
+        new-distance (inc
+                      (neighbor-distance distances new-location))
+        new-distances (if (contains? distances new-location)
+                        distances
+                        (assoc distances new-location new-distance))]
+    (if (= new-location [0 0])
+      (apply max (map second new-distances))
+      (if (and done? (nil? (get distances new-location)))
+        (recur machine new-facing new-location
+               (into {} (map #(vector (first %)
+                                      (Math/abs (- new-distance (second %))))
+                             new-distances)))
+        (recur machine new-facing new-location new-distances)))))
+
+(defn problem15-2
+  []
+  (let [machine (intcode/make-machine (intcode/load-program "input15.txt"))
+        run (intcode/execute-machine machine)]
+    (map-area machine 1 [0 0] {[0 0] 0})))
