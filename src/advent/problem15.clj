@@ -20,8 +20,8 @@
   (loop [direction (nth left-direction facing)]
     (case (move-robot machine direction)
       0 (recur (nth right-direction direction))
-      1 [direction (mapv + location (nth direction-diffs direction))]
-      2 [:complete (mapv + location (nth direction-diffs direction))])))
+      1 [direction (mapv + location (nth direction-diffs direction)) false]
+      2 [direction (mapv + location (nth direction-diffs direction)) true])))
 
 (defn neighbor-distance
   [distances location]
@@ -33,13 +33,13 @@
 
 (defn find-generator
   [machine facing location distances]
-  (let [[new-facing new-location] (find-move machine facing location)
+  (let [[new-facing new-location done?] (find-move machine facing location)
         new-distance (inc
                       (neighbor-distance distances new-location))
         new-distances (if (contains? distances new-location)
                         distances
                         (assoc distances new-location new-distance))]
-    (if (= new-facing :complete)
+    (if done?
       [new-location new-distance]
       (recur machine new-facing new-location new-distances))))
 
