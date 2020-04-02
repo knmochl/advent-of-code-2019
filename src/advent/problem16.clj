@@ -22,3 +22,17 @@
   []
   (let [start (load-input "input16.txt")]
     (take 8 (last (take 101 (iterate fft-process start))))))
+
+(defn seq-to-number
+  [xs]
+  (reduce #(+ (* %1 10) %2) 0 xs))
+
+(defn problem16-2
+  []
+  (let [start (mapcat identity (repeat 10000 (load-input "input16.txt")))
+        offset (seq-to-number (take 7 start))
+        input (reverse (drop offset start))]
+    (loop [in input phase 100]
+      (if (zero? phase)
+        (seq-to-number (take 8 (reverse in)))
+        (recur (reductions (fn [acc n] (mod (+ acc n) 10)) in) (dec phase))))))
