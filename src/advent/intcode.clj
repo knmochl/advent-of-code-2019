@@ -2,8 +2,7 @@
   [:require
    [clojure.java.io :as jio]
    [clojure.string :as str]
-   [clojure.edn :as edn]
-   [clojure.core.async :as async :refer [go-loop >! <! chan]]])
+   [clojure.edn :as edn]])
 
 (defn get-value
   [machine pos mode]
@@ -52,77 +51,73 @@
 
 (defn execute-machine
   [machine]
-  (go-loop [machine machine]
-    (let [memory (:memory machine)
-          instruction-pointer (:ip machine)
-          [opcode modes] (decode-opcode (get-value machine instruction-pointer 1))]
-      (cond
-         (= opcode 99)
-         (do (async/close! (:input machine))
-             (async/close! (:output machine))
-             (assoc machine :ip nil))
-         (= opcode 1)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
-               target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
-               new-memory (set-value memory target (+ value1 value2))
-               new-ip (+ instruction-pointer 4)]
-           (recur (assoc machine :memory new-memory :ip new-ip)))
-         (= opcode 2)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
-               target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
-               new-memory (set-value memory target (* value1 value2))
-               new-ip (+ instruction-pointer 4)]
-           (recur (assoc machine :memory new-memory :ip new-ip)))
-         (= opcode 3)
-         (let [target (get-target machine (+ instruction-pointer 1) (get-mode modes 1))
-               control (>! (:control machine) :input-needed)
-               input (<! (:input machine))
+  (let [memory (:memory machine)
+        instruction-pointer (:ip machine)
+        [opcode modes] (decode-opcode (get-value machine instruction-pointer 1))]
+    (cond
+        (= opcode 99)
+        (assoc machine :ip nil :status :halt)
+        (= opcode 1)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
+              target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
+              new-memory (set-value memory target (+ value1 value2))
+              new-ip (+ instruction-pointer 4)]
+          (recur (assoc machine :memory new-memory :ip new-ip)))
+        (= opcode 2)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
+              target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
+              new-memory (set-value memory target (* value1 value2))
+              new-ip (+ instruction-pointer 4)]
+          (recur (assoc machine :memory new-memory :ip new-ip)))
+        (= opcode 3)
+        (if (nil? (:input machine))
+          (assoc machine :status :input-needed)
+          (let [target (get-target machine (+ instruction-pointer 1) (get-mode modes 1))
+               input (:input machine)
                new-memory (set-value memory target input)
                new-ip (+ instruction-pointer 2)]
-           (recur (assoc machine :memory new-memory :ip new-ip)))
-         (= opcode 4)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               output (:output machine)
-               new-output (>! output value1)
-               new-ip (+ instruction-pointer 2)]
-           (recur (assoc machine :ip new-ip)))
-         (= opcode 5)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               new-ip (get-value machine (+ instruction-pointer 2) (get-mode modes 2))]
-           (if (= value1 0)
-             (recur (assoc machine :ip (+ instruction-pointer 3)))
-             (recur (assoc machine :ip new-ip))))
-         (= opcode 6)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               new-ip (get-value machine (+ instruction-pointer 2) (get-mode modes 2))]
-           (if (= value1 0)
-             (recur (assoc machine :ip new-ip))
-             (recur (assoc machine :ip (+ instruction-pointer 3)))))
-         (= opcode 7)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
-               target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
-               new-ip (+ instruction-pointer 4)
-               new-memory (if (< value1 value2)
-                            (set-value memory target 1)
-                            (set-value memory target 0))]
-           (recur (assoc machine :memory new-memory :ip new-ip)))
-         (= opcode 8)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
-               target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
-               new-ip (+ instruction-pointer 4)
-               new-memory (if (= value1 value2)
-                            (set-value memory target 1)
-                            (set-value memory target 0))]
-           (recur (assoc machine :memory new-memory :ip new-ip)))
-         (= opcode 9)
-         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
-               relative-base (:relative machine)]
-           (recur (assoc machine :ip (+ instruction-pointer 2) :relative (+ value1 relative-base))))
-         :else "error"))))
+            (assoc machine :memory new-memory :ip new-ip :input nil)))
+        (= opcode 4)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              new-ip (+ instruction-pointer 2)]
+          (assoc machine :ip new-ip :status :output-available :output value1))
+        (= opcode 5)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              new-ip (get-value machine (+ instruction-pointer 2) (get-mode modes 2))]
+          (if (= value1 0)
+            (recur (assoc machine :ip (+ instruction-pointer 3)))
+            (recur (assoc machine :ip new-ip))))
+        (= opcode 6)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              new-ip (get-value machine (+ instruction-pointer 2) (get-mode modes 2))]
+          (if (= value1 0)
+            (recur (assoc machine :ip new-ip))
+            (recur (assoc machine :ip (+ instruction-pointer 3)))))
+        (= opcode 7)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
+              target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
+              new-ip (+ instruction-pointer 4)
+              new-memory (if (< value1 value2)
+                          (set-value memory target 1)
+                          (set-value memory target 0))]
+          (recur (assoc machine :memory new-memory :ip new-ip)))
+        (= opcode 8)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              value2 (get-value machine (+ instruction-pointer 2) (get-mode modes 2))
+              target (get-target machine (+ instruction-pointer 3) (get-mode modes 3))
+              new-ip (+ instruction-pointer 4)
+              new-memory (if (= value1 value2)
+                          (set-value memory target 1)
+                          (set-value memory target 0))]
+          (recur (assoc machine :memory new-memory :ip new-ip)))
+        (= opcode 9)
+        (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
+              relative-base (:relative machine)]
+          (recur (assoc machine :ip (+ instruction-pointer 2) :relative (+ value1 relative-base))))
+        :else "error")))
 
 (defn load-program
   [filename]
@@ -130,6 +125,4 @@
 
 (defn make-machine
   ([memory]
-   {:memory memory :ip 0 :input (chan) :output (chan) :control (chan) :relative 0})
-  ([memory input output]
-   {:memory memory :ip 0 :input input :output output :relative 0}))
+   {:memory memory :ip 0 :input nil :output nil :status :running :relative 0}))
