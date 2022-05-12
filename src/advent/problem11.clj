@@ -3,7 +3,7 @@
 
 (defn initialize-robot
   [filename start-color]
-  {:computer (intcode/make-machine (intcode/load-program filename) [start-color])
+  {:computer (assoc (intcode/make-machine (intcode/load-program filename)) :input start-color)
    :direction [0 1]
    :location [0 0]
    :tiles #{}
@@ -26,12 +26,12 @@
 
 (defn move-robot
   [robot]
-  (let [paint-computer (intcode/run-to-output (:computer robot))]
-    (if (nil? (:ip paint-computer))
+  (let [paint-computer (intcode/execute-machine (:computer robot))]
+    (if (= (:status paint-computer) :halt)
       (assoc robot :complete true)
-      (let [should-paint (intcode/get-output paint-computer)
-            turn-computer (intcode/run-to-output (assoc paint-computer :output []))
-            turn-direction (intcode/get-output turn-computer)
+      (let [should-paint (:output paint-computer)
+            turn-computer (intcode/execute-machine paint-computer)
+            turn-direction (:output turn-computer)
             new-direction (change-direction (:direction robot) turn-direction)
             new-location (vec (map #(+ (get-in robot [:location %])
                                        (get new-direction %)) [0 1]))
@@ -40,7 +40,7 @@
                         (conj (robot :tiles) (robot :location)))
             new-all-tiles (conj (robot :all-tiles) (robot :location))
             tile-painted (if (contains? (robot :tiles) new-location) 1 0)
-            new-computer (assoc turn-computer :input [tile-painted] :output [])]
+            new-computer (assoc turn-computer :input tile-painted)]
         (assoc robot :computer new-computer
                :direction new-direction
                :location new-location
