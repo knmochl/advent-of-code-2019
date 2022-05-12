@@ -78,7 +78,7 @@
                input (:input machine)
                new-memory (set-value memory target input)
                new-ip (+ instruction-pointer 2)]
-            (assoc machine :memory new-memory :ip new-ip :input nil)))
+            (recur (assoc machine :memory new-memory :ip new-ip :input nil :status :running))))
         (= opcode 4)
         (let [value1 (get-value machine (+ instruction-pointer 1) (get-mode modes 1))
               new-ip (+ instruction-pointer 2)]
